@@ -40,7 +40,9 @@ jobs:
       - name: Build blueprint
         run: |
           source env/bin/activate
-          leanblueprint web
+          cd blueprint/src
+          plastex -c plastex.cfg web.tex
+          cd ../..
           mkdir -p home_page
           cp -r blueprint/web home_page/blueprint
           cp blueprint/print/print.pdf home_page/blueprint.pdf 2>/dev/null || true
