@@ -1,0 +1,14 @@
+.toc ul a,
+nav.local_toc ul a {
+	font-size: 1.18rem;
+}
+
+.toc .toc_ref,
+nav.local_toc .toc_ref {
+	font-weight: 700;
+}
+
+a.lean_decl:hover,
+nav.local_toc a:hover {
+	text-decoration: underline;
+}

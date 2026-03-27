@@ -1,0 +1,534 @@
+% In this file you should put the actual content of the blueprint.
+% It will be used both by the web and the print version.
+
+\chapter{Introduction}
+
+This blueprint is a map of the Lean development proving Kepler's laws from conserved quantities and comoment maps.
+It follows the presentation of Guillemin and Sternberg in
+\href{https://bookstore.ams.org/COLL/42}{\emph{Variations on a Theme by Kepler}}.
+
+The mathematical route is:
+\[
+\text{dynamics}
+\Longrightarrow
+\text{conserved quantities } L,A,H
+\Longrightarrow
+\text{Poisson algebra and comoment maps}
+\Longrightarrow
+\text{hidden } \mathfrak{so}(4) \text{ symmetry on } H=h<0
+\Longrightarrow
+\text{Kepler I, II, III.}
+\]
+
+One point matters for reading the Lean code.
+The source text works on \(T^*(\R^3 \setminus \{0\})\).
+The Lean development instead uses the ambient space \(\R^3 \times \R^3\) and then adds the hypothesis \(r \neq 0\) where needed.
+
+\chapter{Foundations}
+
+This chapter fixes the basic objects.
+It introduces the phase space, the physical parameters, the energy, and the two conserved vectors that drive the whole proof.
+
+\section{Phase Space}
+
+\begin{definition}[Phase space and parameters]\label{def:phase-space}
+The formalization works with a three-dimensional Euclidean space \texttt{Vec3}, the phase space \texttt{PhaseSpace := Vec3 × Vec3}, and two positive parameters:
+the mass \(m\) and the gravitational parameter \(\mu\).
+\lean{Kepler.Vec3, Kepler.PhaseSpace, Kepler.MassParam, Kepler.GravitationalParam}
+\leanok
+\end{definition}
+
+\begin{definition}[Radial distance and non-collision locus]\label{def:noncollision}
+For a position \(q\), the radial distance is \(r = \|q\|\).
+The non-collision phase space is the subset where \(r \neq 0\).
+\lean{Kepler.radialDist, Kepler.NoncollisionPhaseSpace}
+\leanok
+\end{definition}
+
+\section{Energy and Conserved Vectors}
+
+\begin{definition}[Energy, angular momentum, and Laplace--Runge--Lenz vector]\label{def:basic-observables}
+For a phase point \(z=(q,p)\), the development uses
+\[
+H(q,p)=\frac{\|p\|^2}{2m}-\frac{\mu}{\|q\|},\qquad
+L=q\times p,\qquad
+A=p\times L-\frac{m\mu}{\|q\|}q.
+\]
+These are the energy, angular momentum, and Laplace--Runge--Lenz vector.
+\uses{def:phase-space,def:noncollision}
+\lean{Kepler.cross, Kepler.energy, Kepler.angularMomentum, Kepler.laplaceLenz}
+\leanok
+\end{definition}
+
+\chapter{Dynamics}
+
+This chapter introduces the Kepler vector field and the notion of a solution.
+It records the first-order equations that the later conservation proofs differentiate.
+
+\section{The Vector Field}
+
+\begin{definition}[Kepler vector field]\label{def:vector-field}
+The Kepler vector field sends \((q,p)\) to
+\[
+\dot q = \frac{1}{m}p,
+\qquad
+\dot p = -\mu \frac{q}{\|q\|^3}
+\]
+away from collision.
+In Lean, the second component is written by cases so that the definition makes sense on all of \texttt{PhaseSpace}.
+\uses{def:phase-space,def:basic-observables}
+\lean{Kepler.keplerVectorField}
+\leanok
+\end{definition}
+
+\begin{definition}[Solutions]\label{def:is-solution}
+A solution is a curve \texttt{gamma : Real → PhaseSpace} such that:
+\begin{enumerate}
+\item it has derivative \texttt{keplerVectorField mp gp (gamma t)} at every time \(t\);
+\item it never hits collision, so \texttt{radialDist (gamma t).1 ≠ 0} for every \(t\).
+\end{enumerate}
+\uses{def:vector-field,def:noncollision}
+\lean{Kepler.IsSolution}
+\leanok
+\end{definition}
+
+\begin{proposition}[Position equation]\label{thm:position-equation}
+For every solution, the position derivative is
+\[
+\dot q = \frac{1}{m}p.
+\]
+\uses{def:is-solution}
+\lean{Kepler.IsSolution.position_rhs}
+\leanok
+\begin{proof}
+This is the first component of the Kepler vector field.
+\end{proof}
+\end{proposition}
+
+\begin{proposition}[Momentum equation]\label{thm:momentum-equation}
+For every solution, the momentum derivative is
+\[
+\dot p = -\mu \frac{q}{\|q\|^3}.
+\]
+\uses{def:is-solution}
+\lean{Kepler.IsSolution.momentum_rhs_eq_smul_position}
+\leanok
+\begin{proof}
+This is the second component of the Kepler vector field away from collision.
+\end{proof}
+\end{proposition}
+
+\begin{proposition}[The Kepler force is radial]\label{thm:radial-force}
+For every solution, the force term is parallel to the position vector, so
+\[
+q \times \dot p = 0.
+\]
+\uses{def:is-solution,thm:momentum-equation}
+\lean{Kepler.IsSolution.position_cross_momentum_rhs_eq_zero}
+\leanok
+\begin{proof}
+The momentum equation shows that \(\dot p\) is a scalar multiple of \(q\).
+Any vector is orthogonal to its own cross product, so the torque term vanishes.
+\end{proof}
+\end{proposition}
+
+\chapter{Conserved Quantities}
+
+This chapter proves that the three main observables stay constant along a non-collision solution.
+It also records the algebraic identities that connect \(L\), \(A\), and \(H\).
+
+\section{Constancy Along Solutions}
+
+\begin{theorem}[Conservation of angular momentum]\label{thm:angular-momentum-const}
+Along every solution, the angular momentum vector is constant.
+\uses{def:is-solution,def:basic-observables,thm:position-equation,thm:radial-force}
+\lean{Kepler.angularMomentum_const}
+\leanok
+\begin{proof}
+The proof differentiates \(q \times p\) coordinate by coordinate.
+The velocity terms cancel, and the force term vanishes because the force is radial.
+\end{proof}
+\end{theorem}
+
+\begin{theorem}[Conservation of the Laplace--Runge--Lenz vector]\label{thm:lrl-const}
+Along every solution, the Laplace--Runge--Lenz vector is constant.
+\uses{def:is-solution,def:basic-observables,thm:angular-momentum-const,thm:momentum-equation}
+\lean{Kepler.laplaceLenz_const}
+\leanok
+\begin{proof}
+Lean differentiates the defining expression for \(A\) coordinate by coordinate.
+The proof uses the equations of motion, the radial force law, and the already established constancy of \(L\).
+\end{proof}
+\end{theorem}
+
+\begin{theorem}[Conservation of energy]\label{thm:energy-const}
+Along every solution, the Hamiltonian energy is constant.
+\uses{def:is-solution,def:basic-observables}
+\lean{Kepler.energy_const}
+\leanok
+\begin{proof}
+The kinetic and potential terms are differentiated separately.
+After substituting the equations of motion, the resulting terms cancel.
+\end{proof}
+\end{theorem}
+
+\section{Algebraic Relations}
+
+\begin{proposition}[Basic identities for \(L\), \(A\), and \(H\)]\label{thm:basic-identities}
+Away from collision, the development proves the standard identities
+\[
+L \cdot A = 0,
+\qquad
+\|A\|^2 = (m\mu)^2 + 2mH\,\|L\|^2,
+\]
+and also shows that \(A\) lies in the span of \(q\) and \(p\).
+\uses{def:basic-observables}
+\lean{Kepler.basic_identities_L_A}
+\leanok
+\begin{proof}
+This is a direct vector-algebra calculation.
+The Lean proof expands the cross products, rewrites the energy term, and packages all four identities in one theorem.
+\end{proof}
+\end{proposition}
+
+\chapter{Poisson Brackets and Comoment Maps}
+
+This chapter moves from conserved quantities to symmetry.
+It defines the Poisson bracket used in the repo and shows that the Kepler Hamiltonian and the rotational observables interact in the expected way.
+
+\section{Canonical Bracket}
+
+\begin{definition}[Partial derivatives and Poisson bracket]\label{def:poisson-bracket}
+For a function on phase space, \texttt{partialQ} and \texttt{partialP} are the coordinate derivatives in the position and momentum directions.
+The Poisson bracket is then
+\[
+\{F,G\}
+=
+\sum_{i=1}^3
+\left(
+\frac{\partial F}{\partial q_i}\frac{\partial G}{\partial p_i}
+-
+\frac{\partial F}{\partial p_i}\frac{\partial G}{\partial q_i}
+\right).
+\]
+\uses{def:phase-space}
+\lean{Kepler.partialQ, Kepler.partialP, Kepler.poissonBracket, Kepler.keplerHamiltonian}
+\leanok
+\end{definition}
+
+\begin{lemma}[Basic canonical brackets]\label{thm:basic-canonical-brackets}
+The coordinate functions satisfy the standard canonical relations:
+\(\{q_i,q_j\}=0\), \(\{p_i,p_j\}=0\), and \(\{q_i,p_j\}=\delta_{ij}\).
+\uses{def:poisson-bracket}
+\lean{Kepler.basic_canonical_brackets}
+\leanok
+\begin{proof}
+This is a direct computation from the definitions of \texttt{partialQ}, \texttt{partialP}, and \texttt{poissonBracket}.
+The Lean proof evaluates each derivative explicitly.
+\end{proof}
+\end{lemma}
+
+\begin{theorem}[Hamilton equations from the Poisson bracket]\label{thm:poisson-kepler}
+The Hamiltonian \texttt{keplerHamiltonian} reproduces the Kepler equations of motion through the Poisson bracket.
+\uses{def:poisson-bracket,def:basic-observables}
+\lean{Kepler.kepler_equations_poisson, Kepler.kepler_equations_poisson_vector}
+\leanok
+\begin{proof}
+The proof first checks the bracket formulas on linear observables \(u \cdot q\) and \(u \cdot p\), and then reads off the coordinate version.
+This is the Poisson-side version of the vector field defined earlier.
+\end{proof}
+\end{theorem}
+
+\section{Rotation Observables}
+
+\begin{definition}[Rotation and hidden observables]\label{def:rotation-observables}
+For \(u \in \R^3\), the development uses the scalar observables
+\[
+L_u = u \cdot L,
+\qquad
+A_u = u \cdot A,
+\]
+with \texttt{comomentMap} as the rotational package built from angular momentum.
+\uses{def:basic-observables}
+\lean{Kepler.comomentMap, Kepler.L_u, Kepler.A_u}
+\leanok
+\end{definition}
+
+\begin{theorem}[Rotational comoment]\label{thm:rotational-comoment}
+The observable \(L_u\) generates simultaneous rotations of position and momentum, satisfies the \(\mathfrak{so}(3)\) bracket relation, and Poisson-commutes with the Hamiltonian.
+\uses{def:poisson-bracket,def:rotation-observables}
+\lean{Kepler.rotational_comoment}
+\leanok
+\begin{proof}
+Lean proves the action on the linear observables \(u \cdot q\) and \(u \cdot p\), then proves
+\(\{L_u,L_v\}=L_{u\times v}\) and \(\{L_u,H\}=0\).
+This is the formal rotational symmetry statement for the Kepler problem.
+\end{proof}
+\end{theorem}
+
+\begin{theorem}[Poisson algebra of \(L\) and \(A\)]\label{thm:la-poisson}
+Away from collision, the observables \(L_u\) and \(A_u\) satisfy the standard bracket relations:
+\[
+\{L_u,L_v\}=L_{u\times v},
+\qquad
+\{L_u,A_v\}=A_{u\times v},
+\qquad
+\{A_u,A_v\}=-2mH\,L_{u\times v}.
+\]
+Both \(L_u\) and \(A_u\) Poisson-commute with the Hamiltonian.
+\uses{def:rotation-observables,def:poisson-bracket}
+\lean{Kepler.poisson_L_u_H, Kepler.poisson_A_u_H, Kepler.LA_poisson_algebra}
+\leanok
+\begin{proof}
+The proof is by direct coordinate expansion of the Poisson bracket.
+Once the bracket identities are established, the Hamiltonian commutation relations show that both families are conserved Hamiltonians.
+\end{proof}
+\end{theorem}
+
+\chapter{Hidden \(\mathfrak{so}(4)\) Symmetry}
+
+This chapter packages the negative-energy symmetry.
+It introduces the shell \(H=h<0\), rescales the Laplace--Runge--Lenz observables, and identifies the resulting algebra with \(\mathfrak{so}(4)\).
+
+\section{Negative-Energy Shell}
+
+\begin{definition}[Negative-energy shell and rescaled observables]\label{def:negative-shell}
+For a fixed \(h<0\), the development defines the shell \texttt{NegativeEnergyShell mp gp h}, the rescaled hidden observables \texttt{K\_u}, the model bracket \texttt{so4ModelBracket}, and the shell comoment package \texttt{mu\_h}.
+\uses{def:rotation-observables,thm:la-poisson}
+\lean{Kepler.K_u, Kepler.NegativeEnergyShell, Kepler.so4ModelBracket, Kepler.mu_h}
+\leanok
+\end{definition}
+
+\begin{proposition}[The model algebra is \(\mathfrak{so}(4)\)]\label{thm:model-so4}
+The explicit bracket model on pairs of vectors is identified with \(\mathfrak{so}(4)\) by the linear map \texttt{Phi}.
+\uses{def:negative-shell}
+\lean{Kepler.Phi, Kepler.so4_model_isomorphic_to_so4}
+\leanok
+\begin{proof}
+The proof constructs a concrete linear model and shows that \texttt{Phi} is bijective and bracket-preserving.
+This lets the later shell theorem be read as a genuine \(\mathfrak{so}(4)\) comoment statement.
+\end{proof}
+\end{proposition}
+
+\begin{theorem}[Hidden \(\mathfrak{so}(4)\) comoment map]\label{thm:hidden-so4}
+On every negative-energy shell \(H=h<0\), the map \texttt{mu\_h} is a comoment map for the model \(\mathfrak{so}(4)\) bracket.
+\uses{def:negative-shell,thm:model-so4,thm:la-poisson}
+\lean{Kepler.hidden_so4_shell_algebra, Kepler.hidden_so4_comoment}
+\leanok
+\begin{proof}
+The shell theorem is obtained by rescaling the \(A_u\) brackets from the previous chapter.
+Lean first proves the component relations for \(L_u\) and \(K_u\), then combines them into the single formula for \texttt{mu\_h}.
+\end{proof}
+\end{theorem}
+
+\begin{corollary}[Two commuting copies of \(\mathfrak{so}(3)\)]\label{thm:two-so3}
+The shell algebra splits into two commuting \(\mathfrak{so}(3)\) families.
+\uses{thm:hidden-so4}
+\lean{Kepler.Jplus_u, Kepler.Jminus_u, Kepler.two_commuting_so3}
+\leanok
+\begin{proof}
+The observables \texttt{Jplus\_u} and \texttt{Jminus\_u} are the standard \(\mathfrak{so}(4)\cong\mathfrak{so}(3)\oplus\mathfrak{so}(3)\) combinations.
+The bracket relations are immediate from the shell theorem.
+\end{proof}
+\end{corollary}
+
+\chapter{Orbit Geometry and Kepler's First Law}
+
+This chapter extracts geometry from the conserved quantities.
+It introduces the usual ellipse parameters, proves planarity, derives the orbit equation, and then identifies the orbit as an ellipse with the origin at a focus.
+
+\section{Geometric Parameters}
+
+\begin{definition}[Eccentricity and semi-axes]\label{def:ellipse-data}
+From a phase point \(z\), the development defines the eccentricity \(e\), the semi-latus rectum \(\ell\), the semi-major axis \(a\), and the semi-minor axis \(b\).
+\uses{def:basic-observables}
+\lean{Kepler.eccentricity, Kepler.semiLatusRectum, Kepler.semiMajorAxis, Kepler.semiMinorAxis}
+\leanok
+\end{definition}
+
+\begin{proposition}[Planarity and parameter relations]\label{thm:ellipse-parameters}
+For negative energy and nonzero angular momentum, the orbit is planar, \(0 \le e < 1\), \(a>0\), \(b>0\), and the parameters satisfy the standard identities relating \(a\), \(b\), \(e\), and \(\ell\).
+\uses{def:ellipse-data,thm:basic-identities,thm:angular-momentum-const,thm:energy-const}
+\lean{Kepler.planarity, Kepler.eccentricity_lt_one, Kepler.semi_major_axis, Kepler.semiLatusRectum_eq_semiMajorAxis_mul_one_sub_eccentricity_sq, Kepler.semiMinorAxis_sq}
+\leanok
+\begin{proof}
+The planarity statement comes from the fact that \(L\) stays fixed and is orthogonal to both \(q\) and \(p\).
+The inequalities and parameter identities come from the norm formula for \(A\) and the algebraic relations proved earlier.
+\end{proof}
+\end{proposition}
+
+\section{Orbit Equation}
+
+\begin{theorem}[Exact orbit equation]\label{thm:orbit-equation}
+If \(L \neq 0\), then each orbit satisfies the polar equation
+\[
+r=\frac{\ell}{1+e\cos\theta}
+\]
+in the adapted direction determined by the Laplace--Runge--Lenz vector, with the circle case handled separately when \(A=0\).
+\uses{def:ellipse-data,thm:lrl-const,thm:angular-momentum-const}
+\lean{Kepler.kepler_first_law_orbit_equation_exact}
+\leanok
+\begin{proof}
+The key identity is \(A \cdot q = \|L\|^2 - m\mu r\).
+After normalizing by \(r\), this becomes the usual conic equation.
+Lean keeps the case \(A=0\) separate so the denominator issues are explicit.
+\end{proof}
+\end{theorem}
+
+\begin{theorem}[Cartesian ellipse form]\label{thm:cartesian-ellipse}
+For negative energy and nonzero angular momentum, the bounded noncircular orbit can be written in orthonormal coordinates \((x,y)\) in its plane as
+\[
+\frac{(x+ae)^2}{a^2}+\frac{y^2}{b^2}=1.
+\]
+If \(A=0\), the orbit is a circle.
+\uses{thm:ellipse-parameters,thm:orbit-equation}
+\lean{Kepler.kepler_first_law_cartesian_ellipse}
+\leanok
+\begin{proof}
+The proof passes from the polar orbit equation to adapted Cartesian coordinates in the orbital plane.
+Lean packages the circle and noncircular ellipse cases in one theorem.
+\end{proof}
+\end{theorem}
+
+\begin{theorem}[The origin is a focus]\label{thm:first-law-focus}
+For the noncircular negative-energy case, the ellipse found above has the origin at one focus.
+\uses{thm:cartesian-ellipse}
+\lean{Kepler.kepler_first_law_focus_geometry, Kepler.kepler_first_law_origin_is_focus}
+\leanok
+\begin{proof}
+Lean proves the focal distance identity \(\sqrt{a^2-b^2}=ae\) and then checks that the translated Cartesian equation places the origin at one focus.
+This is the exact geometric content of Kepler's first law.
+\end{proof}
+\end{theorem}
+
+\begin{theorem}[First law package]\label{thm:first-law-source}
+The project also provides a single theorem that packages the orbital plane, the parameters \(e,\ell,a,b\), the circle case, and the ellipse-with-focus statement.
+\uses{thm:ellipse-parameters,thm:orbit-equation,thm:first-law-focus}
+\lean{Kepler.kepler_first_law_source}
+\leanok
+\begin{proof}
+This theorem repackages the earlier exact results.
+\end{proof}
+\end{theorem}
+
+\chapter{Kepler's Second Law}
+
+This chapter formalizes areal velocity and proves the equal-areas statement.
+The proof is short once angular momentum is known to be constant.
+
+\section{Areal Quantities}
+
+\begin{definition}[Areal velocity and swept area]\label{def:area}
+The signed areal velocity is a scalar built from \(q \times p\), and the swept area on an interval is its integral over time.
+\uses{def:basic-observables}
+\lean{Kepler.signedArealVelocity, Kepler.sweptAreaOn}
+\leanok
+\end{definition}
+
+\begin{theorem}[Constant areal velocity]\label{thm:second-law}
+If the angular momentum is nonzero, then the signed areal velocity is constant and equal to
+\[
+\frac{\|L\|}{2m}.
+\]
+\uses{def:area,thm:angular-momentum-const}
+\lean{Kepler.kepler_second_law}
+\leanok
+\begin{proof}
+The areal velocity is the component of \(q \times p\) along the fixed angular momentum direction.
+Since \(q \times p = L\) and \(L\) is constant, the value is constant.
+\end{proof}
+\end{theorem}
+
+\begin{theorem}[Equal areas in equal times]\label{thm:equal-areas}
+Two time intervals of the same length sweep the same area.
+\uses{def:area,thm:second-law}
+\lean{Kepler.equal_areas_in_equal_times, Kepler.kepler_second_law_source}
+\leanok
+\begin{proof}
+Once the areal velocity is constant, swept area is just interval length times that constant.
+The equal-areas statement is then immediate.
+\end{proof}
+\end{theorem}
+
+\chapter{Periods and Kepler's Third Law}
+
+This chapter adds the notion of period, proves that one period sweeps exactly the area of the ellipse, and derives the period law.
+The most technical part of the formalization lives here: Lean proves that one configuration period traverses the standard ellipse exactly once.
+
+\section{Periods}
+
+\begin{definition}[Configuration and orbital period]\label{def:period}
+A configuration period is a positive period for the position curve that is minimal among positive configuration periods.
+An orbital period adds the matching swept-area condition.
+\uses{def:area}
+\lean{Kepler.HasConfigurationPeriod, Kepler.HasOrbitalPeriod}
+\leanok
+\end{definition}
+
+\begin{proposition}[One period traverses the ellipse once]\label{thm:ellipse-traversal}
+For a bounded nondegenerate orbit with a configuration period \(T\), the orbit admits a standard ellipse parametrization that completes exactly one turn over \([0,T]\).
+\uses{def:period,thm:cartesian-ellipse,thm:second-law}
+\lean{Kepler.configurationPeriod_traverses_standardEllipse_once}
+\leanok
+\begin{proof}
+This is the heaviest technical bridge in the project.
+Lean constructs an angle function \(\theta\), proves the parametrized ellipse formulas, proves monotonicity, and then shows that one configuration period changes the angle by exactly \(2\pi\).
+\end{proof}
+\end{proposition}
+
+\begin{theorem}[Area of one full orbit]\label{thm:ellipse-area}
+If \(T\) is a configuration period, then the swept area over \([0,T]\) is \(\pi ab\).
+\uses{def:period,def:ellipse-data,thm:ellipse-traversal}
+\lean{Kepler.configurationPeriod_sweptArea_eq_pi_mul_semiAxes}
+\leanok
+\begin{proof}
+Using the standard ellipse parametrization, Lean integrates the areal velocity over one full turn.
+The result is the usual area formula for an ellipse.
+\end{proof}
+\end{theorem}
+
+\begin{theorem}[Kepler's third law]\label{thm:third-law}
+For an orbital period \(T\),
+\[
+T^2 = \frac{4\pi^2 m}{\mu} a^3.
+\]
+\uses{def:period,thm:ellipse-area,thm:second-law,thm:ellipse-parameters}
+\lean{Kepler.kepler_third_law_of_period_and_area, Kepler.kepler_third_law}
+\leanok
+\begin{proof}
+The second law gives the swept area over one period as \(T \|L\|/(2m)\).
+The previous theorem gives the same area as \(\pi ab\).
+Combining these with the relation \(b^2 = a\ell\) yields the period formula.
+\end{proof}
+\end{theorem}
+
+\chapter{Synthesis}
+
+This chapter records the final packaging theorem.
+It gathers the planar geometry, the first-law ellipse statement, the equal-areas theorem, and the period law into one formal endpoint.
+
+\begin{theorem}[Kepler's laws from the comoment picture]\label{thm:three-laws}
+For a non-collision solution with negative initial energy and nonzero angular momentum, the development proves:
+\begin{enumerate}
+\item the orbit stays in a fixed plane and is described by the first-law ellipse package;
+\item the signed areal velocity is constant, hence equal areas are swept in equal times;
+\item every configuration period satisfies the third-law formula.
+\end{enumerate}
+\uses{thm:hidden-so4,thm:first-law-source,thm:equal-areas,thm:third-law}
+\lean{Kepler.kepler_laws_from_comoment}
+\leanok
+\begin{proof}
+This theorem is the final bundle.
+It does not introduce a new argument; it collects the exact first-, second-, and third-law results already proved in the previous chapters.
+\end{proof}
+\end{theorem}
+
+\begin{corollary}[Final package]\label{thm:source-package}
+The project also provides a wrapper theorem that packages the rotational Poisson action, the hidden \(\mathfrak{so}(4)\) shell statement, and the Kepler-law conclusions in one declaration.
+\uses{thm:rotational-comoment,thm:hidden-so4,thm:first-law-source,thm:equal-areas,thm:three-laws}
+\lean{Kepler.hidden_so4_comoment_source, Kepler.kepler_laws_from_comoment_source}
+\leanok
+\begin{proof}
+This is the final presentation theorem for the development.
+\end{proof}
+\end{corollary}
