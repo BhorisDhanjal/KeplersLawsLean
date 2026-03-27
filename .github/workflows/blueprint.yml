@@ -36,6 +36,14 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Cache Lake packages
+        uses: actions/cache@v4
+        with:
+          path: .lake/packages
+          key: lake-packages-${{ runner.os }}-${{ hashFiles('lake-manifest.json', 'lean-toolchain') }}
+          restore-keys: |
+            lake-packages-${{ runner.os }}-
+
       - name: Build and lint project
         uses: leanprover/lean-action@434f25c2f80ded67bba02502ad3a86f25db50709
         with:
@@ -49,12 +57,6 @@ jobs:
           blueprint: true
           homepage: home_page
 
-      - name: Upload Pages artifact
-        if: github.ref == 'refs/heads/main'
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: home_page
-          overwrite: true
 
   deploy:
     needs: build
