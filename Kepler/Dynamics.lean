@@ -1,4 +1,6 @@
 import Kepler.Definitions
+import Mathlib.Analysis.Calculus.Deriv.Comp
+import Mathlib.Analysis.Calculus.FDeriv.Linear
 
 set_option linter.style.longLine false
 

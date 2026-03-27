@@ -1,4 +1,6 @@
-import Mathlib
+import Mathlib.Analysis.InnerProductSpace.PiL2
+import Mathlib.Analysis.Normed.Lp.WithLp
+import Mathlib.LinearAlgebra.CrossProduct
 
 namespace Kepler
 
