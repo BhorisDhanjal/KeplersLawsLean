@@ -897,7 +897,7 @@ If $L \neq 0$, then in polar coordinates in the orbital plane $\Pi$, with the po
   r = \frac{\ell}{1 + e\cos\theta}.
 \]
 If $A = 0$ then $e = 0$ and $r = \ell$ (constant), so the orbit is a circle.
-\uses{def:ellipse-data,thm:lrl-const,thm:angular-momentum-const}
+\uses{def:ellipse-data,thm:basic-identities,thm:lrl-const,thm:angular-momentum-const}
 \lean{Kepler.kepler_first_law_orbit_equation_exact}
 \leanok
 \begin{proof}
@@ -973,7 +973,7 @@ Using $a = \ell/(1-e^2)$ and $b^2 = a\ell$, we obtain
 For the noncircular case, the ellipse $\tfrac{(x+ae)^2}{a^2} + \tfrac{y^2}{b^2} = 1$ has its center at $(-ae, 0)$.
 The focal half-distance is $\sqrt{a^2 - b^2} = ae$, so the two foci are at $(-ae \pm ae, 0)$, that is $(0, 0)$ and $(-2ae, 0)$.
 The origin is a focus.
-\uses{thm:cartesian-ellipse}
+\uses{thm:cartesian-ellipse,thm:ellipse-parameters}
 \lean{Kepler.kepler_first_law_focus_geometry, Kepler.kepler_first_law_origin_is_focus}
 \leanok
 \begin{proof}
@@ -992,7 +992,7 @@ For a non-collision solution with $H < 0$ and $L \neq 0$:
   \item The orbit satisfies the polar equation $r = \ell/(1 + e\cos\theta)$.
   \item The orbit is an ellipse with the origin at one focus (or a circle of radius $a$ if $A = 0$).
 \end{itemize}
-\uses{thm:ellipse-parameters,thm:orbit-equation,thm:first-law-focus}
+\uses{thm:ellipse-parameters,thm:orbit-equation,thm:cartesian-ellipse,thm:first-law-focus}
 \lean{Kepler.kepler_first_law_source}
 \leanok
 \begin{proof}
@@ -1088,20 +1088,17 @@ Lean proves that there are orthonormal vectors $e_A$ and $e_B$ in the orbital pl
 \]
 So $\theta(t)$ parametrizes the ellipse.
 The same theorem also gives a derivative formula for $\theta$.
-By the orbit equation, once $\theta(t)$ is known, the radius is
-\[
-  r(t) = \frac{\ell}{1 + e\cos\theta(t)},
-\]
-so $\theta(t)$ determines $q(t)$.
+Since $x(t) = a(\cos\theta(t) - e)$ and $y(t) = b\sin\theta(t)$ together determine $q(t)$ in the orbital plane, the angle $\theta(t)$ determines $q(t)$.
+Note that for the eccentric anomaly, $r(t) = a(1 - e\cos\theta(t))$.
 
-The areal velocity formula can be written as
+The Lean theorem gives the areal velocity formula in terms of $\theta$:
 \[
-  \frac{d\mathcal A}{dt} = \frac{1}{2}r^2 \dot\theta.
+  \frac{d\mathcal A}{dt} = \frac{ab}{2}(1 - e\cos\theta(t))\,\dot\theta(t).
 \]
 The second law says this equals the positive constant $\|L\|/(2m)$.
-Since $r \neq 0$, it follows that
+Since $0 \le e < 1$, we have $1 - e\cos\theta > 0$, so it follows that
 \[
-  \dot\theta = \frac{\|L\|}{mr^2} > 0.
+  \dot\theta = \frac{\|L\|}{mab(1 - e\cos\theta)} > 0.
 \]
 So $\theta(t)$ is strictly increasing.
 The orbit is traversed in one direction.
